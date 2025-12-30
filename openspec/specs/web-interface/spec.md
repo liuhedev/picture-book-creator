@@ -1,0 +1,52 @@
+# web-interface Specification
+
+## Purpose
+TBD - created by archiving change add-web-interface. Update Purpose after archive.
+## Requirements
+### Requirement: Web界面
+系统必须（MUST）提供Web界面，允许用户通过浏览器访问和操作视频转图片功能。
+
+#### Scenario: 访问Web界面
+- **WHEN** 用户打开Web应用
+- **THEN** 系统显示视频上传和参数配置界面
+- **AND** 界面包含文件选择、参数输入和提交按钮
+
+#### Scenario: 上传视频文件
+- **WHEN** 用户选择视频文件并提交
+- **THEN** 系统接收并验证文件
+- **AND** 文件类型为支持的视频格式（如MP4）
+- **AND** 文件大小在允许范围内
+
+#### Scenario: 配置转换参数
+- **WHEN** 用户设置提取间隔和相似度阈值
+- **THEN** 系统接受参数配置
+- **AND** 参数值在有效范围内
+- **AND** 使用默认值（间隔1.0秒，阈值0.95）如果未指定
+
+#### Scenario: 执行转换任务
+- **WHEN** 用户提交转换请求
+- **THEN** 系统启动异步转换任务
+- **AND** 调用现有video_to_images.py功能
+- **AND** 返回任务ID用于查询进度
+
+#### Scenario: 显示转换进度
+- **WHEN** 用户查询任务进度
+- **THEN** 系统返回当前转换状态
+- **AND** 显示已处理帧数和总帧数
+- **AND** 显示已保存图片数和跳过数量
+
+#### Scenario: 下载转换结果
+- **WHEN** 转换任务完成
+- **THEN** 系统提供下载链接
+- **AND** 用户可以下载所有转换后的图片文件
+- **AND** 图片文件为PNG格式
+
+#### Scenario: 错误处理
+- **WHEN** 上传不支持的文件格式
+- **THEN** 系统返回错误提示
+- **AND** 不允许继续处理
+
+- **WHEN** 转换过程中发生错误
+- **THEN** 系统返回错误信息
+- **AND** 清理临时文件
+
