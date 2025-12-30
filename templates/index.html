@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频转图片工具</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>视频转图片工具</h1>
+        
+        <div class="upload-section">
+            <h2>上传视频</h2>
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label for="file">选择视频文件:</label>
+                    <input type="file" id="file" name="file" accept="video/*" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="interval">提取间隔（秒）:</label>
+                    <input type="number" id="interval" name="interval" value="1.0" min="0.1" step="0.1" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="threshold">相似度阈值:</label>
+                    <input type="number" id="threshold" name="threshold" value="0.95" min="0" max="1" step="0.01" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="sharpness">清晰度阈值:</label>
+                    <input type="number" id="sharpness" name="sharpness" value="100" min="0" step="1" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="require_text" name="require_text" checked>
+                        只保留包含文字的图片
+                    </label>
+                </div>
+                
+                <button type="submit" id="submitBtn">开始转换</button>
+            </form>
+        </div>
+        
+        <div class="progress-section" id="progressSection" style="display: none;">
+            <h2>转换进度</h2>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-info" id="progressInfo"></div>
+            <div class="status" id="status"></div>
+        </div>
+        
+        <div class="result-section" id="resultSection" style="display: none;">
+            <h2>转换完成</h2>
+            <div class="result-info" id="resultInfo"></div>
+            <a href="#" id="downloadLink" class="download-btn">下载所有图片</a>
+        </div>
+        
+        <div class="error-section" id="errorSection" style="display: none;">
+            <h2>错误</h2>
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
