@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Skill(zcf:git-commit)"
+      "Skill(zcf:git-commit)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: update project documentation and specifications\n\n- add .cursorindexingignore for development tool configuration\n- add .specstory history files for development tracking\n- archive old web interface specifications to openspec/changes/archive/\n- add new web interface specification to openspec/specs/\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
