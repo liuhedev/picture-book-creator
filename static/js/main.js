@@ -9,9 +9,17 @@ const resultInfo = document.getElementById('resultInfo');
 const downloadLink = document.getElementById('downloadLink');
 const errorMessage = document.getElementById('errorMessage');
 const submitBtn = document.getElementById('submitBtn');
+const reviewSection = document.getElementById('reviewSection');
+const imageGrid = document.getElementById('imageGrid');
+const selectAllBtn = document.getElementById('selectAllBtn');
+const selectNoneBtn = document.getElementById('selectNoneBtn');
+const selectionCount = document.getElementById('selectionCount');
+const downloadSelectedBtn = document.getElementById('downloadSelectedBtn');
 
 let currentTaskId = null;
 let statusInterval = null;
+let imageList = [];
+let selectedImages = new Set();
 
 uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -104,7 +112,7 @@ function updateProgress(data) {
     }
 }
 
-function showResult(data) {
+async function showResult(data) {
     progressSection.style.display = 'none';
     resultSection.style.display = 'block';
     
@@ -123,12 +131,138 @@ function showResult(data) {
         resultInfo.innerHTML = resultHtml;
     }
     
-    downloadLink.href = `/api/download/${currentTaskId}`;
-    downloadLink.download = `frames_${currentTaskId}.zip`;
+    await loadImages();
     
     submitBtn.disabled = false;
     submitBtn.textContent = '开始转换';
 }
+
+async function loadImages() {
+    try {
+        const response = await fetch(`/api/images/${currentTaskId}`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || '加载图片列表失败');
+        }
+        
+        imageList = data.images || [];
+        selectedImages.clear();
+        renderImageGrid();
+        updateSelectionCount();
+    } catch (error) {
+        showError(error.message);
+    }
+}
+
+function renderImageGrid() {
+    imageGrid.innerHTML = '';
+    
+    imageList.forEach((filename, index) => {
+        const imageItem = document.createElement('div');
+        imageItem.className = 'image-item';
+        imageItem.dataset.filename = filename;
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `img-${index}`;
+        checkbox.checked = selectedImages.has(filename);
+        checkbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                selectedImages.add(filename);
+            } else {
+                selectedImages.delete(filename);
+            }
+            updateImageItemState(imageItem, filename);
+            updateSelectionCount();
+        });
+        
+        const img = document.createElement('img');
+        img.src = `/api/image/${currentTaskId}/${filename}`;
+        img.alt = filename;
+        img.loading = 'lazy';
+        
+        const imageName = document.createElement('div');
+        imageName.className = 'image-name';
+        imageName.textContent = filename;
+        
+        imageItem.appendChild(checkbox);
+        imageItem.appendChild(img);
+        imageItem.appendChild(imageName);
+        
+        imageItem.addEventListener('click', (e) => {
+            if (e.target !== checkbox && e.target !== checkbox.parentElement) {
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+            }
+        });
+        
+        updateImageItemState(imageItem, filename);
+        imageGrid.appendChild(imageItem);
+    });
+    
+    reviewSection.style.display = 'block';
+}
+
+function updateImageItemState(item, filename) {
+    if (selectedImages.has(filename)) {
+        item.classList.add('selected');
+    } else {
+        item.classList.remove('selected');
+    }
+}
+
+function updateSelectionCount() {
+    selectionCount.textContent = `已选择 ${selectedImages.size} / ${imageList.length} 张`;
+}
+
+selectAllBtn.addEventListener('click', () => {
+    imageList.forEach(filename => selectedImages.add(filename));
+    renderImageGrid();
+    updateSelectionCount();
+});
+
+selectNoneBtn.addEventListener('click', () => {
+    selectedImages.clear();
+    renderImageGrid();
+    updateSelectionCount();
+});
+
+downloadSelectedBtn.addEventListener('click', async () => {
+    if (selectedImages.size === 0) {
+        alert('请至少选择一张图片');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/download/${currentTaskId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                files: Array.from(selectedImages)
+            })
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || '下载失败');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `frames_selected_${currentTaskId}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        alert(error.message);
+    }
+});
 
 function showError(message) {
     progressSection.style.display = 'none';

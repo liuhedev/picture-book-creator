@@ -27,29 +27,20 @@ def calculate_ssim(img1, img2):
     return ssim(img1_gray, img2_gray)
 
 
-def check_image_sharpness(frame, threshold=100, contrast_threshold=20):
+def check_image_sharpness(frame, threshold=100):
     """
-    检测图片清晰度和对比度，过滤转场图片
+    使用拉普拉斯算子检测图片清晰度
     
     Args:
         frame: 图片帧（BGR格式）
-        threshold: 清晰度阈值（拉普拉斯方差），默认100
-        contrast_threshold: 对比度阈值（标准差），默认20
+        threshold: 清晰度阈值，默认100
     
     Returns:
-        bool: True表示质量足够，False表示质量差（转场图片）
+        bool: True表示清晰度足够，False表示模糊
     """
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    
-    # 清晰度检测（拉普拉斯算子）
     laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
-    sharpness_ok = laplacian_var >= threshold
-    
-    # 对比度检测（标准差）
-    contrast = gray.std()
-    contrast_ok = contrast >= contrast_threshold
-    
-    return sharpness_ok and contrast_ok
+    return laplacian_var >= threshold
 
 
 def has_text(frame, lang='chi_sim+eng'):
@@ -71,7 +62,7 @@ def has_text(frame, lang='chi_sim+eng'):
 
 
 def extract_frames(video_path, output_dir, interval=1.0, similarity_threshold=0.95, 
-                   progress_callback=None, sharpness_threshold=150, contrast_threshold=20, require_text=True, text_lang='chi_sim+eng'):
+                   progress_callback=None, sharpness_threshold=100, require_text=True, text_lang='chi_sim+eng'):
     """
     从视频中提取帧并保存为图片
     
@@ -81,8 +72,7 @@ def extract_frames(video_path, output_dir, interval=1.0, similarity_threshold=0.
         interval: 提取间隔（秒）
         similarity_threshold: 相似度阈值，超过此值则跳过
         progress_callback: 进度回调函数，接收 (frame_count, total_frames, saved_count, skipped_count, quality_filtered, text_filtered) 参数
-        sharpness_threshold: 清晰度阈值，默认150
-        contrast_threshold: 对比度阈值，默认20
+        sharpness_threshold: 清晰度阈值，默认100
         require_text: 是否要求包含文字，默认True
         text_lang: OCR语言，默认中英文
     """
@@ -135,7 +125,7 @@ def extract_frames(video_path, output_dir, interval=1.0, similarity_threshold=0.
                     break
             
             if not is_similar:
-                quality_ok = check_image_sharpness(frame, sharpness_threshold, contrast_threshold)
+                quality_ok = check_image_sharpness(frame, sharpness_threshold)
                 if not quality_ok:
                     quality_filtered += 1
                     if progress_callback is None:
@@ -191,8 +181,7 @@ def main():
     parser.add_argument("-o", "--output", default="output", help="输出目录（默认: output）")
     parser.add_argument("-i", "--interval", type=float, default=1.0, help="提取间隔（秒，默认: 1.0）")
     parser.add_argument("-t", "--threshold", type=float, default=0.95, help="相似度阈值（默认: 0.95）")
-    parser.add_argument("-s", "--sharpness", type=float, default=150, help="清晰度阈值（默认: 150）")
-    parser.add_argument("-c", "--contrast", type=float, default=20, help="对比度阈值（默认: 20）")
+    parser.add_argument("-s", "--sharpness", type=float, default=100, help="清晰度阈值（默认: 100）")
     parser.add_argument("--no-text", action="store_true", help="不要求包含文字")
     parser.add_argument("--text-lang", default="chi_sim+eng", help="OCR语言（默认: chi_sim+eng）")
     

@@ -26,11 +26,13 @@
                 <div class="form-group">
                     <label for="threshold">相似度阈值:</label>
                     <input type="number" id="threshold" name="threshold" value="0.95" min="0" max="1" step="0.01" required>
+                    <div class="form-hint">数值越接近 1，去重越严格（保留越少）；数值越小，去重越宽松（保留越多）。默认 0.95。</div>
                 </div>
                 
                 <div class="form-group">
                     <label for="sharpness">清晰度阈值:</label>
                     <input type="number" id="sharpness" name="sharpness" value="100" min="0" step="1" required>
+                    <div class="form-hint">数值越大，对清晰度要求越高（保留越少）；数值越小，越容忍模糊（保留越多）。默认 100。</div>
                 </div>
                 
                 <div class="form-group">
@@ -56,7 +58,16 @@
         <div class="result-section" id="resultSection" style="display: none;">
             <h2>转换完成</h2>
             <div class="result-info" id="resultInfo"></div>
-            <a href="#" id="downloadLink" class="download-btn">下载所有图片</a>
+            
+            <div class="review-section" id="reviewSection" style="display: none;">
+                <div class="review-controls">
+                    <button id="selectAllBtn" class="btn-secondary">全选</button>
+                    <button id="selectNoneBtn" class="btn-secondary">全不选</button>
+                    <span class="selection-count" id="selectionCount">已选择 0 / 0 张</span>
+                </div>
+                <div class="image-grid" id="imageGrid"></div>
+                <button id="downloadSelectedBtn" class="download-btn">下载选中图片</button>
+            </div>
         </div>
         
         <div class="error-section" id="errorSection" style="display: none;">

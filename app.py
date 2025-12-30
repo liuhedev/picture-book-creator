@@ -7,7 +7,7 @@ import threading
 import uuid
 import zipfile
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 
 from video_to_images import extract_frames
@@ -26,7 +26,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 
-def process_video(task_id, video_path, interval, threshold, sharpness_threshold, contrast_threshold, require_text, text_lang):
+def process_video(task_id, video_path, interval, threshold, sharpness_threshold, require_text, text_lang):
     """异步处理视频转换"""
     output_dir = Path(app.config['OUTPUT_FOLDER']) / task_id
     
@@ -54,7 +54,6 @@ def process_video(task_id, video_path, interval, threshold, sharpness_threshold,
             similarity_threshold=threshold,
             progress_callback=progress_callback,
             sharpness_threshold=sharpness_threshold,
-            contrast_threshold=contrast_threshold,
             require_text=require_text,
             text_lang=text_lang
         )
@@ -88,12 +87,11 @@ def upload():
     
     interval = float(request.form.get('interval', 1.0))
     threshold = float(request.form.get('threshold', 0.95))
-    sharpness_threshold = float(request.form.get('sharpness', 150))
-    contrast_threshold = float(request.form.get('contrast', 20))
+    sharpness_threshold = float(request.form.get('sharpness', 100))
     require_text = request.form.get('require_text', 'true').lower() == 'true'
     text_lang = request.form.get('text_lang', 'chi_sim+eng')
     
-    if interval <= 0 or threshold < 0 or threshold > 1 or sharpness_threshold < 0 or contrast_threshold < 0:
+    if interval <= 0 or threshold < 0 or threshold > 1 or sharpness_threshold < 0:
         return jsonify({'error': '参数无效'}), 400
     
     task_id = str(uuid.uuid4())
@@ -114,7 +112,7 @@ def upload():
     
     thread = threading.Thread(
         target=process_video,
-        args=(task_id, str(video_path), interval, threshold, sharpness_threshold, contrast_threshold, require_text, text_lang)
+        args=(task_id, str(video_path), interval, threshold, sharpness_threshold, require_text, text_lang)
     )
     thread.daemon = True
     thread.start()
@@ -137,8 +135,9 @@ def status(task_id):
         })
 
 
-@app.route('/api/download/<task_id>')
-def download(task_id):
+@app.route('/api/images/<task_id>')
+def list_images(task_id):
+    """获取任务的所有图片文件列表"""
     with tasks_lock:
         if task_id not in tasks:
             return jsonify({'error': '任务不存在'}), 404
@@ -154,16 +153,69 @@ def download(task_id):
     if not output_path.exists():
         return jsonify({'error': '输出目录不存在'}), 404
     
-    zip_path = Path(app.config['OUTPUT_FOLDER']) / f"{task_id}.zip"
+    image_files = sorted([f.name for f in output_path.glob('*.png')])
+    
+    return jsonify({
+        'images': image_files,
+        'count': len(image_files)
+    })
+
+
+@app.route('/api/image/<task_id>/<filename>')
+def get_image(task_id, filename):
+    """获取图片文件"""
+    with tasks_lock:
+        if task_id not in tasks:
+            return jsonify({'error': '任务不存在'}), 404
+        
+        output_dir = tasks[task_id].get('output_dir')
+        if not output_dir:
+            return jsonify({'error': '输出目录不存在'}), 404
+    
+    output_path = Path(output_dir)
+    image_path = output_path / filename
+    
+    if not image_path.exists() or not image_path.is_file():
+        return jsonify({'error': '图片不存在'}), 404
+    
+    return send_from_directory(str(output_path), filename)
+
+
+@app.route('/api/download/<task_id>', methods=['POST'])
+def download(task_id):
+    """下载选中的图片"""
+    with tasks_lock:
+        if task_id not in tasks:
+            return jsonify({'error': '任务不存在'}), 404
+        
+        if tasks[task_id]['status'] != 'completed':
+            return jsonify({'error': '任务未完成'}), 400
+        
+        output_dir = tasks[task_id].get('output_dir')
+        if not output_dir:
+            return jsonify({'error': '输出目录不存在'}), 404
+    
+    output_path = Path(output_dir)
+    if not output_path.exists():
+        return jsonify({'error': '输出目录不存在'}), 404
+    
+    selected_files = request.json.get('files', [])
+    
+    if not selected_files:
+        return jsonify({'error': '请至少选择一张图片'}), 400
+    
+    zip_path = Path(app.config['OUTPUT_FOLDER']) / f"{task_id}_selected.zip"
     
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for file_path in output_path.glob('*.png'):
-            zipf.write(file_path, file_path.name)
+        for filename in selected_files:
+            file_path = output_path / filename
+            if file_path.exists() and file_path.is_file():
+                zipf.write(file_path, filename)
     
     return send_file(
         str(zip_path),
         as_attachment=True,
-        download_name=f'frames_{task_id}.zip',
+        download_name=f'frames_selected_{task_id}.zip',
         mimetype='application/zip'
     )
 

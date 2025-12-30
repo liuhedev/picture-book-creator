@@ -40,6 +40,13 @@ h2 {
     margin-bottom: 20px;
 }
 
+.form-hint {
+    font-size: 0.85em;
+    color: #888;
+    margin-top: 5px;
+    line-height: 1.4;
+}
+
 label {
     display: block;
     margin-bottom: 8px;
@@ -139,4 +146,92 @@ button[type="submit"]:disabled {
 .error-message {
     color: #e53e3e;
     font-weight: 500;
+}
+
+.review-section {
+    margin-top: 20px;
+}
+
+.review-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.selection-count {
+    margin-left: auto;
+    color: #666;
+    font-weight: 500;
+}
+
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.image-item {
+    position: relative;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.2s;
+    background: #f8f9fa;
+}
+
+.image-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.image-item.selected {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.image-item input[type="checkbox"] {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.image-item img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+}
+
+.image-item .image-name {
+    padding: 8px;
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+    background: white;
+    border-top: 1px solid #eee;
 }
