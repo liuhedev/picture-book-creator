@@ -115,14 +115,15 @@ def extract_frames(video_path, output_dir, interval=1.0, similarity_threshold=0.
         if frame_count % frame_interval == 0:
             is_similar = False
             
-            for saved_frame in saved_frames:
-                similarity = calculate_ssim(frame, saved_frame)
-                if similarity >= similarity_threshold:
-                    is_similar = True
-                    skipped_count += 1
-                    if progress_callback is None:
-                        print(f"帧 {frame_count}: 相似度 {similarity:.3f}, 跳过")
-                    break
+            if similarity_threshold > 0:
+                for saved_frame in saved_frames:
+                    similarity = calculate_ssim(frame, saved_frame)
+                    if similarity >= similarity_threshold:
+                        is_similar = True
+                        skipped_count += 1
+                        if progress_callback is None:
+                            print(f"帧 {frame_count}: 相似度 {similarity:.3f}, 跳过")
+                        break
             
             if not is_similar:
                 quality_ok = check_image_sharpness(frame, sharpness_threshold)

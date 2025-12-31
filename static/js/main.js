@@ -15,11 +15,19 @@ const selectAllBtn = document.getElementById('selectAllBtn');
 const selectNoneBtn = document.getElementById('selectNoneBtn');
 const selectionCount = document.getElementById('selectionCount');
 const downloadSelectedBtn = document.getElementById('downloadSelectedBtn');
+const imagePreviewModal = document.getElementById('imagePreviewModal');
+const imagePreviewCloseBtn = document.getElementById('imagePreviewCloseBtn');
+const imagePreviewImg = document.getElementById('imagePreviewImg');
+const imagePreviewFilename = document.getElementById('imagePreviewFilename');
+const imagePreviewSelectCheckbox = document.getElementById('imagePreviewSelectCheckbox');
+const imagePreviewPrevBtn = document.getElementById('imagePreviewPrevBtn');
+const imagePreviewNextBtn = document.getElementById('imagePreviewNextBtn');
 
 let currentTaskId = null;
 let statusInterval = null;
 let imageList = [];
 let selectedImages = new Set();
+let currentPreviewFilename = null;
 
 uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -155,6 +163,75 @@ async function loadImages() {
     }
 }
 
+function findImageItemByFilename(filename) {
+    const items = imageGrid.querySelectorAll('.image-item');
+    for (const item of items) {
+        if (item.dataset.filename === filename) {
+            return item;
+        }
+    }
+    return null;
+}
+
+function syncGridSelectionUI(filename) {
+    const item = findImageItemByFilename(filename);
+    if (!item) {
+        return;
+    }
+    const checkbox = item.querySelector('input[type="checkbox"]');
+    if (checkbox) {
+        checkbox.checked = selectedImages.has(filename);
+    }
+    updateImageItemState(item, filename);
+}
+
+function openImagePreview(filename) {
+    currentPreviewFilename = filename;
+    imagePreviewImg.src = `/api/image/${currentTaskId}/${filename}`;
+    imagePreviewImg.alt = filename;
+    imagePreviewFilename.textContent = filename;
+    imagePreviewSelectCheckbox.checked = selectedImages.has(filename);
+    updatePreviewNavState();
+    imagePreviewModal.style.display = 'flex';
+}
+
+function closeImagePreview() {
+    imagePreviewModal.style.display = 'none';
+    imagePreviewImg.src = '';
+    imagePreviewImg.alt = '';
+    imagePreviewFilename.textContent = '';
+    currentPreviewFilename = null;
+}
+
+function isPreviewOpen() {
+    return imagePreviewModal.style.display !== 'none';
+}
+
+function getCurrentPreviewIndex() {
+    if (!currentPreviewFilename) {
+        return -1;
+    }
+    return imageList.indexOf(currentPreviewFilename);
+}
+
+function updatePreviewNavState() {
+    const idx = getCurrentPreviewIndex();
+    imagePreviewPrevBtn.disabled = idx <= 0;
+    imagePreviewNextBtn.disabled = idx < 0 || idx >= imageList.length - 1;
+}
+
+function navigatePreview(delta) {
+    const idx = getCurrentPreviewIndex();
+    if (idx < 0) {
+        return;
+    }
+    const nextIdx = idx + delta;
+    if (nextIdx < 0 || nextIdx >= imageList.length) {
+        return;
+    }
+    openImagePreview(imageList[nextIdx]);
+}
+
 function renderImageGrid() {
     imageGrid.innerHTML = '';
     
@@ -175,12 +252,19 @@ function renderImageGrid() {
             }
             updateImageItemState(imageItem, filename);
             updateSelectionCount();
+            if (currentPreviewFilename === filename) {
+                imagePreviewSelectCheckbox.checked = selectedImages.has(filename);
+            }
         });
         
         const img = document.createElement('img');
         img.src = `/api/image/${currentTaskId}/${filename}`;
         img.alt = filename;
         img.loading = 'lazy';
+        img.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openImagePreview(filename);
+        });
         
         const imageName = document.createElement('div');
         imageName.className = 'image-name';
@@ -261,6 +345,50 @@ downloadSelectedBtn.addEventListener('click', async () => {
         window.URL.revokeObjectURL(url);
     } catch (error) {
         alert(error.message);
+    }
+});
+
+imagePreviewCloseBtn.addEventListener('click', () => {
+    closeImagePreview();
+});
+
+imagePreviewPrevBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    navigatePreview(-1);
+});
+
+imagePreviewNextBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    navigatePreview(1);
+});
+
+imagePreviewSelectCheckbox.addEventListener('change', (e) => {
+    if (!currentPreviewFilename) {
+        return;
+    }
+    if (e.target.checked) {
+        selectedImages.add(currentPreviewFilename);
+    } else {
+        selectedImages.delete(currentPreviewFilename);
+    }
+    syncGridSelectionUI(currentPreviewFilename);
+    updateSelectionCount();
+});
+
+imagePreviewModal.addEventListener('click', (e) => {
+    if (e.target === imagePreviewModal) {
+        closeImagePreview();
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (!isPreviewOpen()) {
+        return;
+    }
+    if (e.key === 'ArrowLeft') {
+        navigatePreview(-1);
+    } else if (e.key === 'ArrowRight') {
+        navigatePreview(1);
     }
 });
 

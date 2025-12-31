@@ -1,0 +1,42 @@
+# image-quality-filter Specification
+
+## Purpose
+TBD - created by archiving change add-image-quality-filter. Update Purpose after archive.
+## Requirements
+### Requirement: 图片质量筛选
+系统必须（MUST）在提取视频帧时进行质量筛选，只保留高质量且包含文字的图片。
+
+#### Scenario: 过滤转场图片
+- **WHEN** 提取的帧清晰度低于阈值
+- **THEN** 系统跳过保存该帧
+- **AND** 不将该帧计入已保存数量
+- **AND** 记录为质量过滤数量
+
+#### Scenario: 过滤无文字图片
+- **WHEN** 提取的帧中未检测到文字
+- **THEN** 系统跳过保存该帧
+- **AND** 不将该帧计入已保存数量
+- **AND** 记录为文字过滤数量
+
+#### Scenario: 保留高质量有文字图片
+- **WHEN** 提取的帧清晰度达到阈值
+- **AND** 帧中检测到文字
+- **THEN** 系统保存该帧
+- **AND** 计入已保存数量
+
+#### Scenario: 质量筛选配置
+- **WHEN** 用户配置清晰度阈值参数
+- **THEN** 系统使用该阈值进行筛选
+- **AND** 默认使用推荐阈值（如100）
+
+- **WHEN** 用户启用文字检测
+- **THEN** 系统只保留包含文字的图片
+- **AND** 默认启用文字检测
+
+#### Scenario: 筛选统计信息
+- **WHEN** 转换任务完成
+- **THEN** 系统返回筛选统计信息
+- **AND** 包括质量过滤数量
+- **AND** 包括文字过滤数量
+- **AND** 包括最终保存数量
+

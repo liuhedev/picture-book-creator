@@ -235,3 +235,94 @@ button[type="submit"]:disabled {
     background: white;
     border-top: 1px solid #eee;
 }
+
+.image-preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.image-preview-content {
+    background: white;
+    border-radius: 8px;
+    width: min(1000px, 95vw);
+    height: min(85vh, 900px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.image-preview-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    background: #f8f9fa;
+}
+
+.image-preview-nav {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.image-preview-nav:hover {
+    background: #5a6268;
+}
+
+.image-preview-nav:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.image-preview-close {
+    align-self: flex-end;
+    margin: 10px 10px 0 0;
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.image-preview-close:hover {
+    background: #5a6268;
+}
+
+.image-preview-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+.image-preview-filename {
+    color: #666;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#imagePreviewImg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #111;
+}
