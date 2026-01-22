@@ -22,12 +22,15 @@ const imagePreviewFilename = document.getElementById('imagePreviewFilename');
 const imagePreviewSelectCheckbox = document.getElementById('imagePreviewSelectCheckbox');
 const imagePreviewPrevBtn = document.getElementById('imagePreviewPrevBtn');
 const imagePreviewNextBtn = document.getElementById('imagePreviewNextBtn');
+const hidePageTurnCheckbox = document.getElementById('hidePageTurnCheckbox');
 
 let currentTaskId = null;
 let statusInterval = null;
 let imageList = [];
+let imageMetadata = {};  // 存储图片元数据 {filename: {is_page_turn: bool}}
 let selectedImages = new Set();
 let currentPreviewFilename = null;
+let hidePageTurnImages = true;  // 默认隐藏翻页图片
 
 uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -145,6 +148,17 @@ async function showResult(data) {
     submitBtn.textContent = '开始转换';
 }
 
+function updateResultInfoWithPageTurn(pageTurnCount) {
+    const resultInfo = document.getElementById('resultInfo');
+    if (resultInfo && pageTurnCount !== undefined) {
+        const existingHtml = resultInfo.innerHTML;
+        // 检查是否已经添加了翻页统计
+        if (!existingHtml.includes('翻页图片')) {
+            resultInfo.innerHTML = existingHtml + `<p><strong>翻页图片:</strong> ${pageTurnCount} 张</p>`;
+        }
+    }
+}
+
 async function loadImages() {
     try {
         const response = await fetch(`/api/images/${currentTaskId}`);
@@ -154,8 +168,25 @@ async function loadImages() {
             throw new Error(data.error || '加载图片列表失败');
         }
         
-        imageList = data.images || [];
+        // 处理新的数据结构
+        const images = data.images || [];
+        imageList = images.map(img => img.filename);
+        imageMetadata = {};
+        images.forEach(img => {
+            imageMetadata[img.filename] = {
+                is_page_turn: img.is_page_turn || false
+            };
+        });
+        
+        // 更新统计信息
+        if (data.page_turn_count !== undefined) {
+            updateResultInfoWithPageTurn(data.page_turn_count);
+        }
+        
         selectedImages.clear();
+        // 默认选中所有可见图片
+        const visibleImages = getVisibleImages();
+        visibleImages.forEach(filename => selectedImages.add(filename));
         renderImageGrid();
         updateSelectionCount();
     } catch (error) {
@@ -211,38 +242,67 @@ function getCurrentPreviewIndex() {
     if (!currentPreviewFilename) {
         return -1;
     }
-    return imageList.indexOf(currentPreviewFilename);
+    const visibleImages = getVisibleImages();
+    return visibleImages.indexOf(currentPreviewFilename);
 }
 
 function updatePreviewNavState() {
+    const visibleImages = getVisibleImages();
     const idx = getCurrentPreviewIndex();
     imagePreviewPrevBtn.disabled = idx <= 0;
-    imagePreviewNextBtn.disabled = idx < 0 || idx >= imageList.length - 1;
+    imagePreviewNextBtn.disabled = idx < 0 || idx >= visibleImages.length - 1;
 }
 
 function navigatePreview(delta) {
+    const visibleImages = getVisibleImages();
     const idx = getCurrentPreviewIndex();
     if (idx < 0) {
         return;
     }
     const nextIdx = idx + delta;
-    if (nextIdx < 0 || nextIdx >= imageList.length) {
+    if (nextIdx < 0 || nextIdx >= visibleImages.length) {
         return;
     }
-    openImagePreview(imageList[nextIdx]);
+    openImagePreview(visibleImages[nextIdx]);
+}
+
+function getVisibleImages() {
+    if (hidePageTurnImages) {
+        return imageList.filter(filename => {
+            const metadata = imageMetadata[filename];
+            return !metadata || !metadata.is_page_turn;
+        });
+    }
+    return imageList;
 }
 
 function renderImageGrid() {
     imageGrid.innerHTML = '';
     
+    const visibleImages = getVisibleImages();
+    let visibleIndex = 0;
+    
     imageList.forEach((filename, index) => {
+        const metadata = imageMetadata[filename] || {};
+        const isPageTurn = metadata.is_page_turn || false;
+        
+        // 如果隐藏翻页图片且当前是翻页图片，则跳过
+        if (hidePageTurnImages && isPageTurn) {
+            return;
+        }
+        
         const imageItem = document.createElement('div');
         imageItem.className = 'image-item';
         imageItem.dataset.filename = filename;
         
+        // 如果是翻页图片，添加视觉标记
+        if (isPageTurn) {
+            imageItem.classList.add('page-turn');
+        }
+        
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.id = `img-${index}`;
+        checkbox.id = `img-${visibleIndex}`;
         checkbox.checked = selectedImages.has(filename);
         checkbox.addEventListener('change', (e) => {
             if (e.target.checked) {
@@ -283,6 +343,7 @@ function renderImageGrid() {
         
         updateImageItemState(imageItem, filename);
         imageGrid.appendChild(imageItem);
+        visibleIndex++;
     });
     
     reviewSection.style.display = 'block';
@@ -297,11 +358,14 @@ function updateImageItemState(item, filename) {
 }
 
 function updateSelectionCount() {
-    selectionCount.textContent = `已选择 ${selectedImages.size} / ${imageList.length} 张`;
+    const visibleImages = getVisibleImages();
+    const visibleSelected = visibleImages.filter(filename => selectedImages.has(filename)).length;
+    selectionCount.textContent = `已选择 ${visibleSelected} / ${visibleImages.length} 张`;
 }
 
 selectAllBtn.addEventListener('click', () => {
-    imageList.forEach(filename => selectedImages.add(filename));
+    const visibleImages = getVisibleImages();
+    visibleImages.forEach(filename => selectedImages.add(filename));
     renderImageGrid();
     updateSelectionCount();
 });
@@ -378,6 +442,21 @@ imagePreviewSelectCheckbox.addEventListener('change', (e) => {
 imagePreviewModal.addEventListener('click', (e) => {
     if (e.target === imagePreviewModal) {
         closeImagePreview();
+    }
+});
+
+hidePageTurnCheckbox.addEventListener('change', (e) => {
+    hidePageTurnImages = e.target.checked;
+    renderImageGrid();
+    updateSelectionCount();
+    // 如果当前预览的图片被隐藏，关闭预览
+    if (currentPreviewFilename) {
+        const visibleImages = getVisibleImages();
+        if (!visibleImages.includes(currentPreviewFilename)) {
+            closeImagePreview();
+        } else {
+            updatePreviewNavState();
+        }
     }
 });
 

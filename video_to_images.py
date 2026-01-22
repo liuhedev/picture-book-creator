@@ -61,6 +61,64 @@ def has_text(frame, lang='chi_sim+eng'):
         return False
 
 
+def is_page_turn_image(image_path, prev_image_path=None, next_image_path=None, 
+                       motion_blur_threshold=50, edge_sharpness_threshold=30):
+    """
+    检测图片是否为翻页图片
+    
+    翻页图片的特征：
+    1. 运动模糊：拉普拉斯方差较低（但可能已经通过清晰度过滤）
+    2. 边缘模糊：边缘检测结果较弱
+    3. 过渡状态：与前一张或后一张高度相似（SSIM > 0.85）
+    
+    Args:
+        image_path: 图片文件路径
+        prev_image_path: 前一张图片路径（可选）
+        next_image_path: 后一张图片路径（可选）
+        motion_blur_threshold: 运动模糊阈值（拉普拉斯方差），默认50
+        edge_sharpness_threshold: 边缘清晰度阈值，默认30
+    
+    Returns:
+        bool: True表示是翻页图片，False表示不是
+    """
+    try:
+        frame = cv2.imread(str(image_path))
+        if frame is None:
+            return False
+        
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        # 1. 检测运动模糊（拉普拉斯方差）
+        laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+        if laplacian_var < motion_blur_threshold:
+            return True
+        
+        # 2. 检测边缘清晰度（使用Canny边缘检测）
+        edges = cv2.Canny(gray, 50, 150)
+        edge_density = edges.sum() / (gray.shape[0] * gray.shape[1])
+        if edge_density < edge_sharpness_threshold / 1000.0:  # 归一化
+            return True
+        
+        # 3. 检测过渡状态（与前一张或后一张的相似度）
+        if prev_image_path and Path(prev_image_path).exists():
+            prev_frame = cv2.imread(str(prev_image_path))
+            if prev_frame is not None:
+                similarity = calculate_ssim(frame, prev_frame)
+                if similarity > 0.85:  # 高度相似，可能是过渡帧
+                    return True
+        
+        if next_image_path and Path(next_image_path).exists():
+            next_frame = cv2.imread(str(next_image_path))
+            if next_frame is not None:
+                similarity = calculate_ssim(frame, next_frame)
+                if similarity > 0.85:  # 高度相似，可能是过渡帧
+                    return True
+        
+        return False
+    except Exception:
+        return False
+
+
 def extract_frames(video_path, output_dir, interval=1.0, similarity_threshold=0.95, 
                    progress_callback=None, sharpness_threshold=100, require_text=True, text_lang='chi_sim+eng'):
     """
@@ -158,7 +216,7 @@ def extract_frames(video_path, output_dir, interval=1.0, similarity_threshold=0.
     if progress_callback:
         progress_callback(frame_count, total_frames, saved_count, skipped_count, quality_filtered, text_filtered)
     else:
-        print(f"\n提取完成:")
+        print("\n提取完成:")
         print(f"  总帧数: {frame_count}")
         print(f"  保存图片: {saved_count}")
         print(f"  跳过相似: {skipped_count}")

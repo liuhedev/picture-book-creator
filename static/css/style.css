@@ -177,6 +177,20 @@ button[type="submit"]:disabled {
     background: #5a6268;
 }
 
+.filter-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.filter-option input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+}
+
 .selection-count {
     margin-left: auto;
     color: #666;
@@ -208,6 +222,16 @@ button[type="submit"]:disabled {
 .image-item.selected {
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.image-item.page-turn {
+    border-color: #ffc107;
+    opacity: 0.7;
+}
+
+.image-item.page-turn.selected {
+    border-color: #667eea;
+    opacity: 1;
 }
 
 .image-item input[type="checkbox"] {

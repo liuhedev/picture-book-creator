@@ -10,7 +10,7 @@ from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 
-from video_to_images import extract_frames
+from video_to_images import extract_frames, is_page_turn_image
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB
@@ -137,7 +137,7 @@ def status(task_id):
 
 @app.route('/api/images/<task_id>')
 def list_images(task_id):
-    """获取任务的所有图片文件列表"""
+    """获取任务的所有图片文件列表，包含翻页检测结果"""
     with tasks_lock:
         if task_id not in tasks:
             return jsonify({'error': '任务不存在'}), 404
@@ -155,9 +155,33 @@ def list_images(task_id):
     
     image_files = sorted([f.name for f in output_path.glob('*.png')])
     
+    # 检测每张图片是否为翻页图片
+    image_metadata = []
+    page_turn_count = 0
+    
+    for i, filename in enumerate(image_files):
+        image_path = output_path / filename
+        prev_path = output_path / image_files[i - 1] if i > 0 else None
+        next_path = output_path / image_files[i + 1] if i < len(image_files) - 1 else None
+        
+        is_page_turn = is_page_turn_image(
+            image_path,
+            prev_path,
+            next_path
+        )
+        
+        if is_page_turn:
+            page_turn_count += 1
+        
+        image_metadata.append({
+            'filename': filename,
+            'is_page_turn': is_page_turn
+        })
+    
     return jsonify({
-        'images': image_files,
-        'count': len(image_files)
+        'images': image_metadata,
+        'count': len(image_files),
+        'page_turn_count': page_turn_count
     })
 
 
