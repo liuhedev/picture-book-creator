@@ -4,3 +4,4 @@ __pycache__/
 outputs/
 uploads/
 *.log
+.claude/settings.local.json
